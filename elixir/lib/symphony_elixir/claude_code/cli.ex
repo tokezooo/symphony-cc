@@ -491,10 +491,21 @@ defmodule SymphonyElixir.ClaudeCode.CLI do
 
   defp usage_metadata(payload) do
     cond do
-      usage = top_level_usage(payload) -> %{usage: enrich_usage(usage)}
-      assistant_usage = assistant_message_usage(payload) -> %{usage: enrich_usage(assistant_usage)}
+      usage = top_level_usage(payload) -> wrap_usage(enrich_usage(usage))
+      assistant_usage = assistant_message_usage(payload) -> wrap_usage(enrich_usage(assistant_usage))
       true -> %{}
     end
+  end
+
+  # The orchestrator's token integrator only recognizes Codex-specific paths
+  # (`["tokenUsage","total"]`, `["params","msg",...]`). Wrap our flat Anthropic
+  # usage map at the `["tokenUsage","total"]` path so the existing extractor
+  # picks it up. We also keep `:usage` as the flat map for direct consumers.
+  defp wrap_usage(flat_usage) when is_map(flat_usage) do
+    %{
+      :usage => flat_usage,
+      "tokenUsage" => %{"total" => flat_usage}
+    }
   end
 
   defp top_level_usage(payload) when is_map(payload) do

@@ -86,6 +86,27 @@ defmodule SymphonyElixir.ClaudeCode.CLITest do
       end)
     end
 
+    test "exposes usage at a path the orchestrator's token extractor knows" do
+      # Symphony's orchestrator only follows Codex-specific paths when
+      # extracting deltas. The adapter must wrap Anthropic usage at one of
+      # those paths or the running-entry token totals stay 0.
+      with_fake_claude_run(success_stream(), fn ctx ->
+        events = collect_events(ctx)
+
+        notification =
+          Enum.find(events, fn ev ->
+            ev.event == :notification and is_map(Map.get(ev, "tokenUsage"))
+          end)
+
+        assert notification, "expected a notification carrying tokenUsage metadata"
+        flat = get_in(notification, ["tokenUsage", "total"])
+        assert is_map(flat)
+        assert flat["input_tokens"] == 12
+        assert flat["output_tokens"] == 34
+        assert flat["total_tokens"] == 57
+      end)
+    end
+
     test "treats is_error result as a turn failure" do
       with_fake_claude_run(error_stream(), fn ctx ->
         assert {:error, {:turn_failed, _payload}} = ctx.return_value
