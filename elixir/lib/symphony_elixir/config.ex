@@ -20,10 +20,14 @@ defmodule SymphonyElixir.Config do
   {% endif %}
   """
 
-  @type codex_runtime_settings :: %{
-          approval_policy: String.t() | map(),
-          thread_sandbox: String.t(),
-          turn_sandbox_policy: map()
+  @type claude_code_runtime_settings :: %{
+          command: String.t(),
+          permission_mode: String.t(),
+          model: String.t() | nil,
+          extra_args: [String.t()],
+          turn_timeout_ms: pos_integer(),
+          read_timeout_ms: pos_integer(),
+          stall_timeout_ms: non_neg_integer()
         }
 
   @spec settings() :: {:ok, Schema.t()} | {:error, term()}
@@ -61,17 +65,6 @@ defmodule SymphonyElixir.Config do
 
   def max_concurrent_agents_for_state(_state_name), do: settings!().agent.max_concurrent_agents
 
-  @spec codex_turn_sandbox_policy(Path.t() | nil) :: map()
-  def codex_turn_sandbox_policy(workspace \\ nil) do
-    case Schema.resolve_runtime_turn_sandbox_policy(settings!(), workspace) do
-      {:ok, policy} ->
-        policy
-
-      {:error, reason} ->
-        raise ArgumentError, message: "Invalid codex turn sandbox policy: #{inspect(reason)}"
-    end
-  end
-
   @spec workflow_prompt() :: String.t()
   def workflow_prompt do
     case Workflow.current() do
@@ -98,19 +91,22 @@ defmodule SymphonyElixir.Config do
     end
   end
 
-  @spec codex_runtime_settings(Path.t() | nil, keyword()) ::
-          {:ok, codex_runtime_settings()} | {:error, term()}
-  def codex_runtime_settings(workspace \\ nil, opts \\ []) do
+  @spec claude_code_runtime_settings(Path.t() | nil, keyword()) ::
+          {:ok, claude_code_runtime_settings()} | {:error, term()}
+  def claude_code_runtime_settings(_workspace \\ nil, _opts \\ []) do
     with {:ok, settings} <- settings() do
-      with {:ok, turn_sandbox_policy} <-
-             Schema.resolve_runtime_turn_sandbox_policy(settings, workspace, opts) do
-        {:ok,
-         %{
-           approval_policy: settings.codex.approval_policy,
-           thread_sandbox: settings.codex.thread_sandbox,
-           turn_sandbox_policy: turn_sandbox_policy
-         }}
-      end
+      cc = settings.claude_code
+
+      {:ok,
+       %{
+         command: cc.command,
+         permission_mode: cc.permission_mode,
+         model: cc.model,
+         extra_args: cc.extra_args || [],
+         turn_timeout_ms: cc.turn_timeout_ms,
+         read_timeout_ms: cc.read_timeout_ms,
+         stall_timeout_ms: cc.stall_timeout_ms
+       }}
     end
   end
 

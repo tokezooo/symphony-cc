@@ -5,6 +5,12 @@ defmodule SymphonyElixir.LiveE2ETest do
   alias SymphonyElixir.SSH
 
   @moduletag :live_e2e
+  # Pinned skip: the upstream live E2E flow drives a Codex JSON-RPC docker worker
+  # over SSH and uses `codex_*` config keys that no longer exist in this fork.
+  # It needs a parallel rebuild that drives `claude` over SSH instead. Track via
+  # a dedicated TODO in the README rather than running the half-broken upstream
+  # script.
+  @moduletag :skip
   @moduletag timeout: 300_000
 
   @default_team_key "SYME2E"

@@ -1,6 +1,11 @@
 defmodule SymphonyElixir.Orchestrator do
   @moduledoc """
-  Polls Linear and dispatches repository copies to Codex-backed workers.
+  Polls Linear and dispatches repository copies to Claude Code-backed workers.
+
+  Internal field labels still use the `codex_*` prefix (`codex_input_tokens`,
+  `last_codex_message`, `:codex_worker_update`, etc.) inherited from upstream
+  Symphony. They behave identically here — the labels are kept stable to keep
+  the orchestrator/dashboard diff against upstream small.
   """
 
   use GenServer
@@ -446,7 +451,7 @@ defmodule SymphonyElixir.Orchestrator do
   end
 
   defp reconcile_stalled_running_issues(%State{} = state) do
-    timeout_ms = Config.settings!().codex.stall_timeout_ms
+    timeout_ms = Config.settings!().claude_code.stall_timeout_ms
 
     cond do
       timeout_ms <= 0 ->
@@ -479,7 +484,7 @@ defmodule SymphonyElixir.Orchestrator do
       |> terminate_running_issue(issue_id, false)
       |> schedule_issue_retry(issue_id, next_attempt, %{
         identifier: identifier,
-        error: "stalled for #{elapsed_ms}ms without codex activity"
+        error: "stalled for #{elapsed_ms}ms without agent activity"
       })
     else
       state
